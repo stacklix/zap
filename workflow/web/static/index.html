@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zap · Bookmarks</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="brand">
+        <img
+          class="brand-mark"
+          src="/static/zap-icon.png"
+          width="48"
+          height="48"
+          alt="Zap"
+        />
+        <div>
+          <h1 class="brand-title">Zap</h1>
+          <p class="brand-sub">
+            Zap your bookmarks. Instant access, zero friction.
+          </p>
+        </div>
+      </div>
+      <button type="button" id="btn-open-add" class="btn btn-primary header-add">Add bookmark</button>
+    </header>
+
+    <section class="panel search-panel" aria-label="Search">
+      <label class="field-label" for="q">Search</label>
+      <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input
+          type="search"
+          id="q"
+          class="input search-input"
+          placeholder="Filter by title or URL…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+      <p class="hint">Results update as you type. Server stops shortly after you close this tab.</p>
+    </section>
+
+    <section class="panel list-panel" aria-live="polite">
+      <div id="empty-state" class="empty-state" hidden>
+        <p class="empty-title">No bookmarks match</p>
+        <p class="empty-sub">Try another search or add a bookmark.</p>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" id="data-table" hidden>
+          <thead>
+            <tr>
+              <th scope="col">Title</th>
+              <th scope="col">URL</th>
+              <th scope="col" class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Add / Edit -->
+  <div id="modal-save-backdrop" class="modal-backdrop" hidden aria-hidden="true"></div>
+  <div
+    id="modal-save"
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-save-title"
+    hidden
+  >
+    <div class="modal-card">
+      <h2 id="modal-save-title" class="modal-title">Add bookmark</h2>
+      <p id="modal-save-error" class="modal-error" hidden></p>
+      <label class="field-label" for="modal-title">Title</label>
+      <input type="text" id="modal-title" class="input modal-input" placeholder="Title" />
+      <label class="field-label" for="modal-url">URL</label>
+      <input type="url" id="modal-url" class="input modal-input" placeholder="https://…" />
+      <div class="modal-actions">
+        <button type="button" id="modal-save-cancel" class="btn btn-ghost">Cancel</button>
+        <button type="button" id="modal-save-confirm" class="btn btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirm -->
+  <div id="modal-del-backdrop" class="modal-backdrop" hidden aria-hidden="true"></div>
+  <div
+    id="modal-del"
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-del-title"
+    hidden
+  >
+    <div class="modal-card">
+      <h2 id="modal-del-title" class="modal-title">Delete bookmark</h2>
+      <p id="modal-del-message" class="modal-message"></p>
+      <div class="modal-actions">
+        <button type="button" id="modal-del-cancel" class="btn btn-ghost">Cancel</button>
+        <button type="button" id="modal-del-confirm" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

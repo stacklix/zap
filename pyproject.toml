@@ -1,0 +1,12 @@
+[project]
+name = "zap-workflow"
+version = "0.1.6"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["taskipy>=1.11.0"]
+
+[tool.taskipy.tasks]
+pack = "python scripts/build_workflow.py --channel test"
+release = "python scripts/build_workflow.py --channel release"
+clean = "rm -rf dist/zap-workflow dist/zap.alfredworkflow dist/zap.zip dist/zap-*-workflow dist/zap-*.alfredworkflow"
