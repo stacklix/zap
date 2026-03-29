@@ -11,7 +11,10 @@ zap/
 ├── README.md                 # 英文说明（本仓库主 README）
 ├── README.zh.md              # 本文件 — 中文说明
 ├── Makefile
-├── pyproject.toml            # 正式发布版本号（PEP 621）；可选 taskipy 任务
+├── pyproject.toml            # 版本号、开发依赖、pytest 配置
+├── _zap_build_meta.py        # setuptools 占位，便于 `pip install -e ".[dev]"`
+├── tests/                    # pytest（见「CI 与合并保护」）
+├── .github/workflows/        # GitHub Actions CI
 ├── promot.md
 ├── scripts/
 │   └── build_workflow.py     # 打包 → dist/
@@ -39,6 +42,12 @@ zap/
 ## 数据存储
 
 - 书签保存在 `~/.config/alfred/zap/`（`zap.json` 与 `icon/`）。
+
+## CI 与合并保护
+
+- **测试：** 在仓库根目录执行 `python -m pip install -e ".[dev]"`，再执行 `python -m pytest -q`。测试在 [`tests/`](tests/)，`pytest` 会把 [`workflow/`](workflow/) 加入 `PYTHONPATH`。
+- **GitHub Actions：** 推送到 **`master`** 或以 **`master`** 为目标的 Pull Request 会运行 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)（工作流名 **CI**，任务 **`test`**）。
+- **合并门槛（仓库设置）：** 在 GitHub **Settings → Rules / Branch protection** 为 **`master`** 开启规则，要求状态检查 **`test`**（PR 界面常显示为 **`CI / test`**）通过后才能合并。须由仓库管理员在网页上配置，无法仅靠本仓库内文件实现。
 
 ## 安装（使用工作流）
 

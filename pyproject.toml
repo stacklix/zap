@@ -1,10 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "zap-workflow"
 version = "0.1.6"
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
-dev = ["taskipy>=1.11.0"]
+dev = ["taskipy>=1.11.0", "pytest>=8"]
+
+[tool.setuptools]
+py-modules = ["_zap_build_meta"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["workflow"]
 
 [tool.taskipy.tasks]
 pack = "python scripts/build_workflow.py --channel test"
