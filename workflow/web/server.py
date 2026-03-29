@@ -13,8 +13,12 @@ from pathlib import Path
 
 import zap
 
-STATIC_DIR = Path(__file__).resolve().parent / "static"
-WORKFLOW_DIR = Path(__file__).resolve().parent.parent
+# Anchor assets to the workflow folder that owns zap.py — not to this file's directory.
+# Otherwise a different `web` package earlier on PYTHONPATH can shadow this module and
+# STATIC_DIR would point at a tree with no `static/index.html`.
+_WORKFLOW_ROOT = Path(zap.__file__).resolve().parent
+STATIC_DIR = _WORKFLOW_ROOT / "web" / "static"
+WORKFLOW_DIR = _WORKFLOW_ROOT
 WORKFLOW_ICON = WORKFLOW_DIR / "icon.png"
 STATIC_ICON = STATIC_DIR / "zap-icon.png"
 
@@ -98,7 +102,13 @@ class ZapWebHandler(BaseHTTPRequestHandler):
             if index.is_file():
                 self._send_file(index, "text/html; charset=utf-8")
             else:
-                self._json({"error": "index missing"}, 404)
+                self._json(
+                    {
+                        "error": "index missing",
+                        "path": str(index),
+                    },
+                    404,
+                )
             return
 
         if path == "/zap-icon.png":
@@ -130,12 +140,35 @@ class ZapWebHandler(BaseHTTPRequestHandler):
             _mark_ping()
             q = urllib.parse.parse_qs(parsed.query).get("q", [""])[0].lower()
             data = zap.load_bookmarks()
-            items = [
-                {"title": k, "url": v}
-                for k, v in sorted(data.items(), key=lambda i: i[0].lower())
-                if not q or q in k.lower() or q in v.lower()
-            ]
+            items = []
+            for k, v in sorted(data.items(), key=lambda i: i[0].lower()):
+                if q and q not in k.lower() and q not in v["url"].lower():
+                    continue
+                icon = v.get("icon")
+                icon_url = (
+                    "/api/icons/" + urllib.parse.quote(icon, safe="")
+                    if icon
+                    else None
+                )
+                items.append({"title": k, "url": v["url"], "iconUrl": icon_url})
             self._json(items)
+            return
+
+        if path.startswith("/api/icons/"):
+            _mark_ping()
+            name = urllib.parse.unquote(path.removeprefix("/api/icons/").lstrip("/"))
+            target = zap.safe_icon_file_path(name)
+            default = zap.default_bookmark_icon_path()
+            if target is None or not target.is_file():
+                if default.is_file():
+                    self._send_file(default, "image/png")
+                else:
+                    self._json({"error": "not found"}, 404)
+                return
+            ctype = mimetypes.guess_type(str(target))[0] or "application/octet-stream"
+            if target.suffix.lower() == ".svg":
+                ctype = "image/svg+xml"
+            self._send_file(target, ctype)
             return
 
         self._json({"error": "not found"}, 404)
@@ -170,9 +203,12 @@ class ZapWebHandler(BaseHTTPRequestHandler):
             self._json({"error": "url required"}, 400)
             return
         data = zap.load_bookmarks()
-        data[title] = url
+        if title in data:
+            zap.remove_stored_icon(data[title].get("icon"))
+        icon = zap.fetch_and_store_icon(url, title)
+        data[title] = {"url": url, "icon": icon}
         zap.save_bookmarks(data)
-        self._json({"ok": True})
+        self._json({"ok": True, "icon": icon})
 
     def do_DELETE(self) -> None:  # noqa: N802
         path = urllib.parse.urlparse(self.path).path
@@ -183,6 +219,7 @@ class ZapWebHandler(BaseHTTPRequestHandler):
         title = urllib.parse.unquote(path.removeprefix("/api/bookmarks/")).strip()
         data = zap.load_bookmarks()
         if title in data:
+            zap.remove_stored_icon(data[title].get("icon"))
             del data[title]
             zap.save_bookmarks(data)
         self._json({"ok": True})
@@ -200,6 +237,9 @@ def open_browser(url: str) -> None:
 
 def serve_zap_web(host: str, port: int) -> None:
     global _http_server, _last_ping_monotonic
+    index = STATIC_DIR / "index.html"
+    if not index.is_file():
+        print(f"Zap web UI: expected index at {index}", flush=True)
     url = f"http://{host}:{port}"
     open_browser(url)
     with _idle_lock:

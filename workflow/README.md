@@ -15,7 +15,7 @@ Zap is a lightweight, high-performance Alfred Workflow designed to manage and la
 
 Set in Alfred via the workflow **[×] → Variables** (stored in `info.plist` defaults; overrides go in `prefs.plist`):
 
-- **`DATA_PATH`** — Absolute or `~` path to the Zap data directory (default: `~/.config/alfred`). Bookmarks are stored as `zap.json` inside that folder; other files may use the same directory later.
+- **`DATA_PATH`** — Absolute or `~` path to the Zap data directory (default: `~/.config/alfred/zap`). Bookmarks are stored as `zap.json` inside that folder; favicons in `icon/` subfolder.
 - **`WEB_PORT`** — Local port for `zap web` (default in this workflow: `14535`). Empty or invalid values fall back to that default.
 
 Running `zap.py` outside Alfred without these variables uses the same defaults.
