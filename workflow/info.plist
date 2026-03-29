@@ -206,14 +206,14 @@
 	<key>variables</key>
 	<dict>
 		<key>DATA_PATH</key>
-		<string>~/.config/alfred/zap.json</string>
+		<string>~/.config/alfred/</string>
 		<key>WEB_PORT</key>
 		<string>14535</string>
 	</dict>
 	<key>variablesdontexport</key>
 	<array/>
 	<key>version</key>
-	<string>0.1.14</string>
+	<string>0.1.21</string>
 	<key>webaddress</key>
 	<string>https://stackli.cc</string>
 </dict>
