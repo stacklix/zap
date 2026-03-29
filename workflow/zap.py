@@ -2,14 +2,18 @@
 import json
 import os
 import re
+import secrets
 import subprocess
 import sys
 import unicodedata
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+
+import favicon as site_favicon
 
 _STORE_FILENAME = "zap.json"
-_DEFAULT_DATA_DIR = Path("~/.config/alfred").expanduser()
+_ICON_SUBDIR = "icon"
+_DEFAULT_DATA_DIR = Path("~/.config/alfred/zap").expanduser()
 _DEFAULT_WEB_PORT = 14535
 
 
@@ -38,33 +42,125 @@ def _web_port_from_env() -> int:
 
 DATA_DIR = _data_dir_from_env()
 BOOKMARKS_PATH = DATA_DIR / _STORE_FILENAME
+ICON_DIR = DATA_DIR / _ICON_SUBDIR
 WEB_PORT = _web_port_from_env()
 
 
 def ensure_store() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    ICON_DIR.mkdir(parents=True, exist_ok=True)
     if not BOOKMARKS_PATH.exists():
-        BOOKMARKS_PATH.write_text("{}", encoding="utf-8")
+        BOOKMARKS_PATH.write_text("{}\n", encoding="utf-8")
 
 
-def load_bookmarks() -> Dict[str, str]:
+def load_bookmarks() -> Dict[str, Dict[str, Any]]:
     ensure_store()
     try:
         raw = BOOKMARKS_PATH.read_text(encoding="utf-8").strip()
         data = json.loads(raw) if raw else {}
-        if isinstance(data, dict):
-            return {str(k): str(v) for k, v in data.items()}
+        if not isinstance(data, dict):
+            return {}
+        out: Dict[str, Dict[str, Any]] = {}
+        for k, v in data.items():
+            if not isinstance(v, dict):
+                continue
+            url = v.get("url")
+            if not isinstance(url, str) or not url.strip():
+                continue
+            icon = v.get("icon")
+            if icon is not None and not isinstance(icon, str):
+                icon = None
+            out[str(k)] = {"url": url.strip(), "icon": icon}
+        return out
     except Exception:
         pass
     return {}
 
 
-def save_bookmarks(data: Dict[str, str]) -> None:
+def save_bookmarks(data: Dict[str, Dict[str, Any]]) -> None:
     ensure_store()
+    payload: Dict[str, Dict[str, Any]] = {}
+    for title in sorted(data.keys(), key=lambda t: t.lower()):
+        v = data[title]
+        entry: Dict[str, Any] = {"url": v["url"]}
+        if v.get("icon"):
+            entry["icon"] = v["icon"]
+        payload[title] = entry
     BOOKMARKS_PATH.write_text(
-        json.dumps(dict(sorted(data.items())), ensure_ascii=False, indent=2) + "\n",
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def sanitize_title_for_filename(title: str) -> str:
+    s = title.strip()
+    for ch in '\\/:*?"<>|\n\r\t\x00':
+        s = s.replace(ch, "_")
+    s = re.sub(r"_+", "_", s).strip("._")
+    return s[:80] if s else "bookmark"
+
+
+def make_icon_filename(title: str, ext: str) -> str:
+    base = sanitize_title_for_filename(title)
+    return f"{base}_{secrets.token_hex(4)}{ext}"
+
+
+def safe_icon_file_path(filename: Optional[str]) -> Optional[Path]:
+    if not filename or not isinstance(filename, str):
+        return None
+    name = Path(filename).name
+    if name != filename or ".." in filename:
+        return None
+    base = ICON_DIR.resolve()
+    p = (base / name).resolve()
+    try:
+        p.relative_to(base)
+    except ValueError:
+        return None
+    return p
+
+
+def remove_stored_icon(filename: Optional[str]) -> None:
+    p = safe_icon_file_path(filename)
+    if p is not None and p.is_file():
+        try:
+            p.unlink()
+        except OSError:
+            pass
+
+
+def fetch_and_store_icon(page_url: str, title: str) -> Optional[str]:
+    got = site_favicon.fetch_favicon(page_url)
+    if not got:
+        return None
+    raw, ext = got
+    if ext not in (".png", ".jpg", ".jpeg", ".ico", ".svg", ".webp"):
+        ext = ".ico"
+    ensure_store()
+    name = make_icon_filename(title, ext)
+    (ICON_DIR / name).write_bytes(raw)
+    return name
+
+
+def default_bookmark_icon_path() -> Path:
+    static = Path(__file__).resolve().parent / "web" / "static" / "zap-icon.png"
+    if static.is_file():
+        return static
+    fallback = Path(__file__).resolve().parent / "icon.png"
+    return fallback
+
+
+def alfred_icon_payload(stored_name: Optional[str]) -> Dict[str, str]:
+    fb = default_bookmark_icon_path()
+    fallback = {"path": str(fb), "type": ""}
+    if not stored_name:
+        return fallback
+    if stored_name.lower().endswith(".svg"):
+        return fallback
+    ip = safe_icon_file_path(stored_name)
+    if ip is None or not ip.is_file():
+        return fallback
+    return {"path": str(ip), "type": ""}
 
 
 def run_osascript(script: str) -> str:
@@ -115,7 +211,8 @@ def search(title: str) -> List[dict]:
     data = load_bookmarks()
     q = title.lower().strip()
     rows = []
-    for t, u in data.items():
+    for t, entry in data.items():
+        u = entry["url"]
         if not q or q in t.lower() or q in u.lower():
             rows.append(
                 {
@@ -123,6 +220,7 @@ def search(title: str) -> List[dict]:
                     "subtitle": u,
                     "arg": u,
                     "valid": True,
+                    "icon": alfred_icon_payload(entry.get("icon")),
                 }
             )
     rows.sort(key=lambda x: x["title"].lower())
@@ -141,7 +239,11 @@ def edit(title: str, url: Optional[str]) -> str:
 
     url = normalize_url(url)
     data = load_bookmarks()
-    data[title] = url
+    prev = data.get(title)
+    if prev:
+        remove_stored_icon(prev.get("icon"))
+    icon = fetch_and_store_icon(url, title)
+    data[title] = {"url": url, "icon": icon}
     save_bookmarks(data)
     return f"Saved: {title} -> {url}"
 
@@ -155,6 +257,7 @@ def delete(title: str) -> str:
         return f"Not found: {title}"
     if not confirm_delete(title):
         return "Cancelled."
+    remove_stored_icon(data[title].get("icon"))
     del data[title]
     save_bookmarks(data)
     return f"Deleted: {title}"

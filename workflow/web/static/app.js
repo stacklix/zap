@@ -17,6 +17,7 @@
   const modalUrl = document.getElementById("modal-url");
   const modalSaveCancel = document.getElementById("modal-save-cancel");
   const modalSaveConfirm = document.getElementById("modal-save-confirm");
+  const DEFAULT_ROW_ICON = "/static/zap-icon.png";
 
   const modalDelBackdrop = document.getElementById("modal-del-backdrop");
   const modalDel = document.getElementById("modal-del");
@@ -49,6 +50,19 @@
 
     items.forEach((item) => {
       const tr = document.createElement("tr");
+
+      const tdIcon = document.createElement("td");
+      tdIcon.className = "col-icon";
+      const img = document.createElement("img");
+      img.className = "row-favicon";
+      img.width = 28;
+      img.height = 28;
+      img.alt = "";
+      img.decoding = "async";
+      img.loading = "lazy";
+      img.src = item.iconUrl || DEFAULT_ROW_ICON;
+      img.referrerPolicy = "no-referrer";
+      tdIcon.appendChild(img);
 
       const tdTitle = document.createElement("td");
       tdTitle.textContent = item.title;
@@ -87,6 +101,7 @@
 
       tdAct.appendChild(editBtn);
       tdAct.appendChild(delBtn);
+      tr.appendChild(tdIcon);
       tr.appendChild(tdTitle);
       tr.appendChild(tdUrl);
       tr.appendChild(tdAct);
@@ -185,6 +200,8 @@
       return;
     }
     setSaveError("");
+    modalSaveConfirm.disabled = true;
+    modalSaveConfirm.textContent = "Saving…";
     try {
       if (saveOriginalTitle && saveOriginalTitle !== title) {
         await fetch("/api/bookmarks/" + encodeURIComponent(saveOriginalTitle), {
@@ -206,6 +223,9 @@
     } catch (e) {
       setSaveError("Network error.");
       console.error(e);
+    } finally {
+      modalSaveConfirm.disabled = false;
+      modalSaveConfirm.textContent = "Save";
     }
   }
 

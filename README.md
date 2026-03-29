@@ -38,7 +38,7 @@ zap/
 
 ## Data storage
 
-- Bookmarks are stored in `~/.config/alfred/zap.json`.
+- Bookmarks are stored under `~/.config/alfred/zap/` (`zap.json` and `icon/`).
 
 ## Install (using the workflow)
 

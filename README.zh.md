@@ -38,7 +38,7 @@ zap/
 
 ## 数据存储
 
-- 书签保存在 `~/.config/alfred/zap.json`。
+- 书签保存在 `~/.config/alfred/zap/`（`zap.json` 与 `icon/`）。
 
 ## 安装（使用工作流）
 

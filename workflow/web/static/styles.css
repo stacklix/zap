@@ -253,6 +253,27 @@ body {
   white-space: nowrap;
 }
 
+.col-icon {
+  width: 52px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.data-table th.col-icon {
+  text-align: center;
+}
+
+.row-favicon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  object-fit: contain;
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
 .col-actions .btn {
   margin-right: 6px;
 }
