@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
+
+
+def _entry(url: str) -> dict:
+    return {"url": url}
 
 
 def test_normalize_url(zap_module) -> None:
@@ -20,17 +22,23 @@ def test_load_bookmarks_empty_store(zap_module, tmp_path) -> None:
 
 
 def test_save_and_load_roundtrip_sorted_keys(zap_module, tmp_path) -> None:
-    data = {"b": "https://b.test", "a": "https://a.test"}
+    data = {"b": _entry("https://b.test"), "a": _entry("https://a.test")}
     zap_module.save_bookmarks(data)
     raw = (tmp_path / "zap.json").read_text(encoding="utf-8")
     # Keys sorted alphabetically for stable file output
     assert raw.index('"a"') < raw.index('"b"')
-    assert zap_module.load_bookmarks() == {"a": "https://a.test", "b": "https://b.test"}
+    assert zap_module.load_bookmarks() == {
+        "a": {"url": "https://a.test", "icon": None},
+        "b": {"url": "https://b.test", "icon": None},
+    }
 
 
 def test_search_filters_and_sorts(zap_module) -> None:
     zap_module.save_bookmarks(
-        {"Zebra": "https://z.example", "Alpha": "https://alpha.example"}
+        {
+            "Zebra": _entry("https://z.example"),
+            "Alpha": _entry("https://alpha.example"),
+        }
     )
     rows = zap_module.search("alpha")
     assert len(rows) == 1
