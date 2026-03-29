@@ -11,7 +11,10 @@ zap/
 ├── README.md                 # this file — developer / repo overview (English)
 ├── README.zh.md              # Chinese readme
 ├── Makefile
-├── pyproject.toml            # release version (PEP 621); optional taskipy tasks
+├── pyproject.toml            # release version (PEP 621); dev deps + pytest config
+├── _zap_build_meta.py        # setuptools marker for `pip install -e ".[dev]"`
+├── tests/                    # pytest (see CI section)
+├── .github/workflows/        # GitHub Actions CI
 ├── promot.md
 ├── scripts/
 │   └── build_workflow.py     # pack workflow → dist/
@@ -39,6 +42,12 @@ zap/
 ## Data storage
 
 - Bookmarks are stored under `~/.config/alfred/zap/` (`zap.json` and `icon/`).
+
+## CI and branch protection
+
+- **Tests:** from the repo root, run `python -m pip install -e ".[dev]"` then `python -m pytest -q`. Tests live in [`tests/`](tests/); `pytest` is configured to put [`workflow/`](workflow/) on `PYTHONPATH`.
+- **GitHub Actions:** pushes and pull requests targeting **`master`** run [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (workflow name **CI**, job **`test`**).
+- **Merge gate (repository settings):** enable a branch protection rule or ruleset for **`master`** that requires the **`test`** status check to pass before merging (the exact label in the UI is often **`CI / test`**). This must be turned on under GitHub **Settings → Rules / Branch protection** by a repo admin; it cannot be enforced by files in this repository alone.
 
 ## Install (using the workflow)
 
