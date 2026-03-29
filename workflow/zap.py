@@ -8,14 +8,15 @@ import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional
 
-_DEFAULT_DATA_PATH = Path("~/.config/alfred/zap.json").expanduser()
+_STORE_FILENAME = "zap.json"
+_DEFAULT_DATA_DIR = Path("~/.config/alfred").expanduser()
 _DEFAULT_WEB_PORT = 14535
 
 
-def _data_path_from_env() -> Path:
+def _data_dir_from_env() -> Path:
     raw = os.environ.get("DATA_PATH", "").strip()
     if not raw:
-        return _DEFAULT_DATA_PATH
+        return _DEFAULT_DATA_DIR
     p = Path(os.path.expanduser(raw))
     if not p.is_absolute():
         p = Path.home() / p
@@ -35,20 +36,21 @@ def _web_port_from_env() -> int:
     return n
 
 
-DATA_PATH = _data_path_from_env()
+DATA_DIR = _data_dir_from_env()
+BOOKMARKS_PATH = DATA_DIR / _STORE_FILENAME
 WEB_PORT = _web_port_from_env()
 
 
 def ensure_store() -> None:
-    DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
-    if not DATA_PATH.exists():
-        DATA_PATH.write_text("{}", encoding="utf-8")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if not BOOKMARKS_PATH.exists():
+        BOOKMARKS_PATH.write_text("{}", encoding="utf-8")
 
 
 def load_bookmarks() -> Dict[str, str]:
     ensure_store()
     try:
-        raw = DATA_PATH.read_text(encoding="utf-8").strip()
+        raw = BOOKMARKS_PATH.read_text(encoding="utf-8").strip()
         data = json.loads(raw) if raw else {}
         if isinstance(data, dict):
             return {str(k): str(v) for k, v in data.items()}
@@ -59,7 +61,7 @@ def load_bookmarks() -> Dict[str, str]:
 
 def save_bookmarks(data: Dict[str, str]) -> None:
     ensure_store()
-    DATA_PATH.write_text(
+    BOOKMARKS_PATH.write_text(
         json.dumps(dict(sorted(data.items())), ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
