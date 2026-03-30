@@ -52,7 +52,7 @@ def _idle_watch_loop() -> None:
             if time.monotonic() - _last_ping_monotonic < _IDLE_AFTER_SECONDS:
                 continue
             srv = _http_server
-        print("No active Zap web UI (heartbeat stopped); shutting down server.", flush=True)
+        print("Zap web stopped: no active tab heartbeat for ~32s.", flush=True)
         try:
             srv.shutdown()
         except OSError:
@@ -249,7 +249,6 @@ def serve_zap_web(host: str, port: int) -> None:
         _http_server = server
     watcher = threading.Thread(target=_idle_watch_loop, name="zap-idle-watch", daemon=True)
     watcher.start()
-    print(f"Serving {url} (stops ~{_IDLE_AFTER_SECONDS:.0f}s after closing all tabs)", flush=True)
     try:
         server.serve_forever()
     finally:

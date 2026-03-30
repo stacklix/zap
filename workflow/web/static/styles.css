@@ -276,6 +276,8 @@ body {
 
 .col-actions .btn {
   margin-right: 6px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
 }
 
 .col-actions .btn:last-child {
