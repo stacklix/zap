@@ -4,7 +4,7 @@
 
 ### Project overview
 
-Zap is a pure-Python Alfred workflow bookmark manager with a local web UI. Zero third-party runtime dependencies — everything uses the Python standard library. Dev dependencies are `pytest` and `taskipy`.
+Zap is an Alfred workflow bookmark manager with a local web UI. Dev dependencies are `pytest` and `taskipy`.
 
 ### Commands
 
