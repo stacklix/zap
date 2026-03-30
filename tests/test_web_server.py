@@ -92,6 +92,7 @@ def test_http_endpoints_and_handlers(monkeypatch, tmp_path, zap_module) -> None:
     monkeypatch.setattr(zap_module, "fetch_and_store_icon", lambda *_: "fetched.png")
 
     # Prepare one bookmark with icon file and one without.
+    zap_module.ensure_store()
     icon_file = zap_module.safe_icon_file_path("site.svg")
     assert icon_file is not None
     icon_file.write_text("<svg></svg>", encoding="utf-8")
