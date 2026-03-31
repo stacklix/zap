@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import compileall
 import os
 import plistlib
 import re
@@ -234,6 +235,8 @@ def build(
         staged_plist = stage / "info.plist"
         with open(staged_plist, "wb") as f:
             plistlib.dump(plist_data, f, fmt=plistlib.FMT_XML)
+
+        compileall.compile_dir(str(stage), quiet=2, optimize=0)
 
         shutil.copytree(stage, DIST_UNPACKED)
 

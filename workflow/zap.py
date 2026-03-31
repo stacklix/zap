@@ -9,8 +9,6 @@ import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import favicon as site_favicon
-
 _STORE_FILENAME = "zap.json"
 _ICON_SUBDIR = "icon"
 _DEFAULT_DATA_DIR = Path("~/.config/alfred/zap").expanduser()
@@ -130,6 +128,8 @@ def remove_stored_icon(filename: Optional[str]) -> None:
 
 
 def fetch_and_store_icon(page_url: str, title: str) -> Optional[str]:
+    import favicon as site_favicon
+
     got = site_favicon.fetch_favicon(page_url)
     if not got:
         return None

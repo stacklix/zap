@@ -72,13 +72,15 @@ def test_filename_and_icon_helpers(zap_module, tmp_path, monkeypatch) -> None:
     zap_module.remove_stored_icon("del.png")
     assert not icon_file.exists()
 
-    monkeypatch.setattr(zap_module.site_favicon, "fetch_favicon", lambda _u: (b"icon", ".exe"))
+    import favicon as favicon_mod
+
+    monkeypatch.setattr(favicon_mod, "fetch_favicon", lambda _u: (b"icon", ".exe"))
     saved_name = zap_module.fetch_and_store_icon("https://a", "A")
     assert saved_name is not None
     assert saved_name.endswith(".ico")
     assert (zap_module.ICON_DIR / saved_name).is_file()
 
-    monkeypatch.setattr(zap_module.site_favicon, "fetch_favicon", lambda _u: None)
+    monkeypatch.setattr(favicon_mod, "fetch_favicon", lambda _u: None)
     assert zap_module.fetch_and_store_icon("https://a", "A") is None
 
     old_relative_to = Path.relative_to
