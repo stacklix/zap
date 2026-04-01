@@ -10,12 +10,27 @@ Zap is an Alfred workflow bookmark manager with a local web UI. Dev dependencies
 
 | Task | Command |
 |------|---------|
-| Install dev deps | `python3 -m pip install -e ".[dev]"` |
-| Run tests | `python3 -m pytest -q` |
+| Create venv | `python3 -m venv .venv` |
+| Install dev deps | `./.venv/bin/python -m pip install -e ".[dev]"` |
+| Run tests | `./.venv/bin/python -m pytest -q` |
 | Build (test channel) | `python3 scripts/build_workflow.py --channel test --version <x.y.z>` |
 | Build (release) | `make release` |
 
 No linter is configured. CI (`.github/workflows/ci.yml`) runs only `pytest`.
+
+### Mandatory workflow rules
+
+- Use the project virtual environment (`.venv`) for development and all test runs.
+- Prefer `./.venv/bin/python -m ...` form to avoid interpreter/path mismatch.
+- Before committing code, run CI-equivalent tests locally and ensure they pass (`./.venv/bin/python -m pytest -q`).
+- Do not create a commit when local tests are failing.
+
+### Commit checklist
+
+1. `python3 -m venv .venv` (if missing)
+2. `./.venv/bin/python -m pip install -e ".[dev]"`
+3. `./.venv/bin/python -m pytest -q`
+4. Only then run `git add` + `git commit`
 
 ### Running the web UI
 

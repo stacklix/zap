@@ -89,7 +89,7 @@ def test_http_endpoints_and_handlers(monkeypatch, tmp_path, zap_module) -> None:
         original_remove_stored_icon(name)
 
     monkeypatch.setattr(zap_module, "remove_stored_icon", _remove_icon)
-    monkeypatch.setattr(zap_module, "fetch_and_store_icon", lambda *_: "fetched.png")
+    monkeypatch.setattr(zap_module, "fetch_and_store_icon_with_reason", lambda *_: ("fetched.png", None))
 
     # Prepare one bookmark with icon file and one without.
     zap_module.ensure_store()

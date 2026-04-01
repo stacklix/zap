@@ -222,12 +222,15 @@ class ZapWebHandler(BaseHTTPRequestHandler):
             return
         data = zap.load_bookmarks()
         prev_icon = data[title].get("icon") if title in data else None
-        icon = zap.fetch_and_store_icon(url, title)
+        icon, icon_error = zap.fetch_and_store_icon_with_reason(url, title)
         data[title] = {"url": url, "icon": icon}
         zap.save_bookmarks(data)
         if prev_icon and prev_icon != icon:
             zap.remove_stored_icon(prev_icon)
-        self._json({"ok": True, "icon": icon})
+        payload = {"ok": True, "icon": icon}
+        if not icon and icon_error:
+            payload["iconError"] = icon_error
+        self._json(payload)
 
     def do_DELETE(self) -> None:  # noqa: N802
         path = urllib.parse.urlparse(self.path).path
