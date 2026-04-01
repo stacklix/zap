@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 import json
 import os
+import random
 import re
 import secrets
+import socket
 import subprocess
 import sys
+import threading
 import unicodedata
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -12,7 +15,8 @@ from typing import Any, Dict, List, Optional
 _STORE_FILENAME = "zap.json"
 _ICON_SUBDIR = "icon"
 _DEFAULT_DATA_DIR = Path("~/.config/alfred/zap").expanduser()
-_DEFAULT_WEB_PORT = 14535
+_WEB_PORT_MIN = 14535
+_WEB_PORT_MAX = 15000
 
 
 def _data_dir_from_env() -> Path:
@@ -25,23 +29,25 @@ def _data_dir_from_env() -> Path:
     return p
 
 
-def _web_port_from_env() -> int:
-    raw = os.environ.get("WEB_PORT", "").strip()
-    if not raw:
-        return _DEFAULT_WEB_PORT
-    try:
-        n = int(raw, 10)
-    except ValueError:
-        return _DEFAULT_WEB_PORT
-    if not (1 <= n <= 65535):
-        return _DEFAULT_WEB_PORT
-    return n
+def _pick_open_web_port() -> int:
+    ports = list(range(_WEB_PORT_MIN, _WEB_PORT_MAX + 1))
+    random.shuffle(ports)
+    for port in ports:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.bind(("127.0.0.1", port))
+            return port
+        except OSError:
+            continue
+        finally:
+            s.close()
+    raise RuntimeError(f"No free port in {_WEB_PORT_MIN}-{_WEB_PORT_MAX}")
 
 
 DATA_DIR = _data_dir_from_env()
 BOOKMARKS_PATH = DATA_DIR / _STORE_FILENAME
 ICON_DIR = DATA_DIR / _ICON_SUBDIR
-WEB_PORT = _web_port_from_env()
+_store_lock = threading.Lock()
 
 
 def ensure_store() -> None:
@@ -142,6 +148,33 @@ def fetch_and_store_icon(page_url: str, title: str) -> Optional[str]:
     return name
 
 
+def _refresh_icon_for_bookmark(title: str, url: str) -> None:
+    icon = fetch_and_store_icon(url, title)
+    with _store_lock:
+        data = load_bookmarks()
+        cur = data.get(title)
+        # Skip stale async result when bookmark changed/deleted.
+        if not cur or cur.get("url") != url:
+            if icon:
+                remove_stored_icon(icon)
+            return
+        old_icon = cur.get("icon")
+        data[title] = {"url": url, "icon": icon}
+        save_bookmarks(data)
+    if old_icon and old_icon != icon:
+        remove_stored_icon(old_icon)
+
+
+def _schedule_icon_refresh(title: str, url: str) -> None:
+    t = threading.Thread(
+        target=_refresh_icon_for_bookmark,
+        args=(title, url),
+        name="zap-cli-icon-fetch",
+        daemon=True,
+    )
+    t.start()
+
+
 def default_bookmark_icon_path() -> Path:
     static = Path(__file__).resolve().parent / "web" / "static" / "zap-icon.png"
     if static.is_file():
@@ -238,13 +271,14 @@ def edit(title: str, url: Optional[str]) -> str:
         return "Cancelled."
 
     url = normalize_url(url)
-    data = load_bookmarks()
-    prev = data.get(title)
-    if prev:
-        remove_stored_icon(prev.get("icon"))
-    icon = fetch_and_store_icon(url, title)
-    data[title] = {"url": url, "icon": icon}
-    save_bookmarks(data)
+    with _store_lock:
+        data = load_bookmarks()
+        prev_icon = data[title].get("icon") if title in data else None
+        data[title] = {"url": url, "icon": None}
+        save_bookmarks(data)
+    if prev_icon:
+        remove_stored_icon(prev_icon)
+    _schedule_icon_refresh(title, url)
     return f"Saved: {title} -> {url}"
 
 
@@ -252,21 +286,27 @@ def delete(title: str) -> str:
     title = title.strip()
     if not title:
         return "Title is required."
-    data = load_bookmarks()
-    if title not in data:
-        return f"Not found: {title}"
+    with _store_lock:
+        data = load_bookmarks()
+        if title not in data:
+            return f"Not found: {title}"
     if not confirm_delete(title):
         return "Cancelled."
-    remove_stored_icon(data[title].get("icon"))
-    del data[title]
-    save_bookmarks(data)
+    with _store_lock:
+        data = load_bookmarks()
+        if title not in data:
+            return f"Not found: {title}"
+        old_icon = data[title].get("icon")
+        del data[title]
+        save_bookmarks(data)
+    remove_stored_icon(old_icon)
     return f"Deleted: {title}"
 
 
 def open_web() -> None:
     from web.server import serve_zap_web
 
-    serve_zap_web("127.0.0.1", WEB_PORT)
+    serve_zap_web("127.0.0.1", _pick_open_web_port())
 
 
 def _normalize_query_whitespace(query: str) -> str:

@@ -7,7 +7,7 @@ import ssl
 from html.parser import HTMLParser
 from typing import List, Optional, Tuple
 from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 USER_AGENT = (
@@ -162,11 +162,8 @@ def _sorted_hrefs(links: List[Tuple[str, str, str]], base_url: str) -> List[str]
     return out
 
 
-def fetch_favicon(page_url: str) -> Optional[Tuple[bytes, str]]:
-    """
-    Download favicon bytes for page_url.
-    Returns (data, extension_with_dot) or None.
-    """
+def _fetch_favicon_once(page_url: str) -> Optional[Tuple[bytes, str]]:
+    """Download favicon bytes once for page_url."""
     page = fetch_limited(page_url, MAX_HTML_BYTES)
     if not page:
         return None
@@ -208,4 +205,33 @@ def fetch_favicon(page_url: str) -> Optional[Tuple[bytes, str]]:
         if _looks_like_image(raw, ext):
             return raw, ext
 
+    return None
+
+
+def _url_without_leading_www(page_url: str) -> Optional[str]:
+    parsed = urlparse(page_url)
+    host = parsed.hostname or ""
+    if not host.lower().startswith("www."):
+        return None
+    bare_host = host[4:]
+    if not bare_host:
+        return None
+    netloc = bare_host
+    if parsed.port is not None:
+        netloc = f"{bare_host}:{parsed.port}"
+    return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+
+
+def fetch_favicon(page_url: str) -> Optional[Tuple[bytes, str]]:
+    """
+    Download favicon bytes for page_url.
+    Returns (data, extension_with_dot) or None.
+    If first pass fails and host starts with www., retry once without www.
+    """
+    got = _fetch_favicon_once(page_url)
+    if got is not None:
+        return got
+    fallback_url = _url_without_leading_www(page_url)
+    if fallback_url and fallback_url != page_url:
+        return _fetch_favicon_once(fallback_url)
     return None

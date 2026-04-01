@@ -14,6 +14,7 @@ def test_normalize_url(zap_module) -> None:
     assert zap_module.normalize_url("  ") == ""
     assert zap_module.normalize_url("example.com") == "https://example.com"
     assert zap_module.normalize_url("https://a.test") == "https://a.test"
+    assert zap_module.normalize_url("http://a.test") == "http://a.test"
 
 
 def test_load_bookmarks_empty_store(zap_module, tmp_path) -> None:

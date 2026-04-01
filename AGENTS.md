@@ -19,7 +19,7 @@ No linter is configured. CI (`.github/workflows/ci.yml`) runs only `pytest`.
 
 ### Running the web UI
 
-The web server starts via `cd workflow && python3 zap.py web`. It binds to `127.0.0.1:14535` by default (override with `WEB_PORT` env var). The server auto-shuts down ~32 s after the last browser heartbeat.
+The web server starts via `cd workflow && python3 zap.py web`. It picks a free local port randomly in `14535..15000` on each run. The server auto-shuts down ~32 s after the last browser heartbeat.
 
 Set `DATA_PATH` env var to use a custom bookmark store location (default `~/.config/alfred/zap/`).
 

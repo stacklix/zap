@@ -17,51 +17,61 @@
           height="48"
           alt="Zap"
         />
-        <div>
-          <h1 class="brand-title">Zap</h1>
-          <p class="brand-sub">
-            Zap your bookmarks. Instant access, zero friction.
-          </p>
+        <div class="brand-text">
+          <h1 class="brand-title">Zap <span id="app-version" class="app-version"></span></h1>
+          <p class="brand-sub">Zap your bookmarks. Instant access, zero friction.</p>
         </div>
       </div>
-      <button type="button" id="btn-open-add" class="btn btn-primary header-add">Add bookmark</button>
+      <div class="header-actions">
+        <label for="lang-select" class="sr-only">Language</label>
+        <select id="lang-select" class="lang-select" aria-label="Language">
+          <option value="en">English</option>
+          <option value="zh-Hans">简体中文</option>
+          <option value="zh-Hant">繁體中文</option>
+        </select>
+        <button type="button" id="btn-open-help" class="btn btn-ghost header-add">Help</button>
+      </div>
     </header>
 
     <section class="panel search-panel" aria-label="Search">
-      <label class="field-label" for="q">Search</label>
-      <div class="search-wrap">
-        <span class="search-icon" aria-hidden="true">⌕</span>
-        <input
-          type="search"
-          id="q"
-          class="input search-input"
-          placeholder="Filter by title or URL…"
-          autocomplete="off"
-          spellcheck="false"
-        />
+      <label class="field-label" for="q" id="label-search">Search</label>
+      <div class="form-row">
+        <div class="search-wrap">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            id="q"
+            class="input search-input"
+            placeholder="Filter by title or URL…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <button type="button" id="btn-open-add" class="btn btn-primary">Add</button>
       </div>
-      <p class="hint">Results update as you type. Server stops shortly after you close this tab.</p>
+      <p class="hint" id="hint-live">Results update as you type. Server stops shortly after you close this tab.</p>
     </section>
 
     <section class="panel list-panel" aria-live="polite">
       <div id="empty-state" class="empty-state" hidden>
-        <p class="empty-title">No bookmarks match</p>
-        <p class="empty-sub">Try another search or add a bookmark.</p>
+        <p class="empty-title" id="empty-title">No bookmarks match</p>
+        <p class="empty-sub" id="empty-sub">Try another search or add a bookmark.</p>
       </div>
       <div class="table-scroll">
         <table class="data-table" id="data-table" hidden>
           <thead>
             <tr>
-              <th scope="col" class="col-icon">Icon</th>
-              <th scope="col">Title</th>
-              <th scope="col">URL</th>
-              <th scope="col" class="col-actions">Actions</th>
+              <th scope="col" class="col-icon" id="th-icon">Icon</th>
+              <th scope="col" id="th-title">Title</th>
+              <th scope="col" id="th-url">URL</th>
+              <th scope="col" class="col-actions" id="th-actions">Actions</th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
     </section>
+
   </div>
 
   <!-- Add / Edit -->
@@ -77,9 +87,9 @@
     <div class="modal-card">
       <h2 id="modal-save-title" class="modal-title">Add bookmark</h2>
       <p id="modal-save-error" class="modal-error" hidden></p>
-      <label class="field-label" for="modal-title">Title</label>
+      <label class="field-label" for="modal-title" id="label-modal-title">Title</label>
       <input type="text" id="modal-title" class="input modal-input" placeholder="Title" />
-      <label class="field-label" for="modal-url">URL</label>
+      <label class="field-label" for="modal-url" id="label-modal-url">URL</label>
       <input type="url" id="modal-url" class="input modal-input" placeholder="https://…" />
       <div class="modal-actions">
         <button type="button" id="modal-save-cancel" class="btn btn-ghost">Cancel</button>
@@ -104,6 +114,31 @@
       <div class="modal-actions">
         <button type="button" id="modal-del-cancel" class="btn btn-ghost">Cancel</button>
         <button type="button" id="modal-del-confirm" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Command help -->
+  <div id="modal-help-backdrop" class="modal-backdrop" hidden aria-hidden="true"></div>
+  <div
+    id="modal-help"
+    class="modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-help-title"
+    hidden
+  >
+    <div class="help-dialog">
+      <h2 id="modal-help-title" class="modal-title">Zap command help</h2>
+      <ul class="help-list">
+        <li id="help-item-search"><code>zap &lt;text&gt;</code> Search bookmarks by title or URL.</li>
+        <li id="help-item-edit-url"><code>zap edit &lt;title&gt; &lt;url&gt;</code> Add or update a bookmark.</li>
+        <li id="help-item-edit"><code>zap edit &lt;title&gt;</code> Add/update and prompt URL in dialog.</li>
+        <li id="help-item-del"><code>zap del &lt;title&gt;</code> Delete a bookmark with confirmation.</li>
+        <li id="help-item-web"><code>zap web</code> Open this web manager page.</li>
+      </ul>
+      <div class="modal-actions">
+        <button type="button" id="modal-help-close" class="btn btn-primary">Close</button>
       </div>
     </div>
   </div>

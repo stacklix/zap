@@ -16,7 +16,6 @@ Zap is a lightweight, high-performance Alfred Workflow designed to manage and la
 Set in Alfred via the workflow **[×] → Variables** (stored in `info.plist` defaults; overrides go in `prefs.plist`):
 
 - **`DATA_PATH`** — Absolute or `~` path to the Zap data directory (default: `~/.config/alfred/zap`). Bookmarks are stored as `zap.json` inside that folder; favicons in `icon/` subfolder.
-- **`WEB_PORT`** — Local port for `zap web` (default in this workflow: `14535`). Empty or invalid values fall back to that default.
 
 Running `zap.py` outside Alfred without these variables uses the same defaults.
 
@@ -28,7 +27,7 @@ Type `zap` in Alfred, then (if needed) a space and the rest. Commands:
 - `zap edit <title> <url>` — Add or update a bookmark (e.g. `zap edit github https://github.com`).
 - `zap edit <title>` — Same without URL; a dialog asks for the link.
 - `zap del <title>` — Remove a bookmark after confirmation (e.g. `zap del github`).
-- `zap web` — Open the local web UI to manage bookmarks. The built-in server stops automatically about half a minute after you close every browser tab (no page + no heartbeat).
+- `zap web` — Open the local web UI to manage bookmarks. It picks a free local port randomly in `14535..15000`, and stops automatically about half a minute after you close every browser tab (no page + no heartbeat).
 
 ---
 *Built for developers who value speed.*
