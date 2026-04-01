@@ -1,8 +1,24 @@
-# zap
+# Zap
 
-Zap is a bookmark managing system — an Alfred workflow bookmark manager built with pure Python.
+Zap is a lightweight, high-performance Alfred Workflow designed to manage and launch your favorite URLs with lightning speed. Stop digging through folders or browser tabs—just type, zap, and go.
 
 **[中文说明](README.zh.md)** · English
+
+## Get Started
+To get started, install Zap in Alfred by downloading the release package, then double-clicking it (or dragging it into Alfred's Workflows list).
+
+- `zap <title>`: search bookmarks.
+- `zap edit <title> [url]`: add or edit bookmark.
+  - If `url` is omitted, an AppleScript dialog asks for URL.
+- `zap del <title>`: delete bookmark with a confirmation dialog.
+- `zap web`: open web page for bookmark CRUD.
+
+## Screenshots
+![command search](screenshot/zap_search.png)
+![command edit](screenshot/zap_edit.png)
+![web command](screenshot/zap_web.png)
+![web page](screenshot/zap_web_page.png)
+
 
 ## Project layout
 
@@ -31,27 +47,12 @@ zap/
     └── zap-workflow/           # same contents, unpacked (for inspection)
 ```
 
-## Features
 
-- `zap <title>`: search bookmarks.
-- `zap edit <title> [url]`: add or edit bookmark.
-  - If `url` is omitted, an AppleScript dialog asks for URL.
-- `zap del <title>`: delete bookmark with a confirmation dialog.
-- `zap web`: open web page for bookmark CRUD.
 
 ## Data storage
 
 - Bookmarks are stored under `~/.config/alfred/zap/` (`zap.json` and `icon/`).
 
-## CI and branch protection
-
-- **Tests:** from the repo root, run `python -m pip install -e ".[dev]"` then `python -m pytest -q`. Tests live in [`tests/`](tests/); `pytest` is configured to put [`workflow/`](workflow/) on `PYTHONPATH`.
-- **GitHub Actions:** pushes and pull requests targeting **`master`** run [`.github/workflows/ci.yml`](.github/workflows/ci.yml) (workflow name **CI**, job **`test`**).
-- **Merge gate (repository settings):** enable a branch protection rule or ruleset for **`master`** that requires the **`test`** status check to pass before merging (the exact label in the UI is often **`CI / test`**). This must be turned on under GitHub **Settings → Rules / Branch protection** by a repo admin; it cannot be enforced by files in this repository alone.
-
-## Install (using the workflow)
-
-Build or download **`dist/zap.alfredworkflow`**, then **double-click** it (or drag it into Alfred’s Workflows list). No manual node wiring is required—the plist in [`workflow/info.plist`](workflow/info.plist) already defines Script Filter, Run Script, and connections.
 
 ## Alfred node reference (for contributors)
 

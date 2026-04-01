@@ -1,8 +1,25 @@
-# zap
+# Zap
 
 [English](README.md) | **中文**
 
-`zap` 是一个用纯 Python 编写的 Alfred 工作流书签管理工具。
+Zap 是一个轻量、高性能的 Alfred Workflow，用来快速管理和打开常用网址。告别反复翻文件夹和标签页，输入、搜索、打开，一步完成。
+
+## 快速开始
+
+先下载安装包并导入 Alfred：下载 release 包后双击安装（或拖入 Alfred 的 Workflows 列表）。
+
+- `zap <title>`：搜索书签。
+- `zap edit <title> [url]`：添加或编辑书签。
+  - 省略 `url` 时会用 AppleScript 对话框询问 URL。
+- `zap del <title>`：删除书签（带确认）。
+- `zap web`：在浏览器中打开网页管理界面。
+
+## 截图
+
+![命令搜索](screenshot/zap_search.png)
+![命令编辑](screenshot/zap_edit.png)
+![网页命令](screenshot/zap_web.png)
+![网页界面](screenshot/zap_web_page.png)
 
 ## 项目结构
 
@@ -31,31 +48,13 @@ zap/
     └── zap-workflow/           # 与 zip 内容相同，解压目录（便于检查）
 ```
 
-## 功能
-
-- `zap <title>`：搜索书签。
-- `zap edit <title> [url]`：添加或编辑书签。
-  - 省略 `url` 时会用 AppleScript 对话框询问 URL。
-- `zap del <title>`：删除书签（带确认）。
-- `zap web`：在浏览器中打开网页管理界面。
-
 ## 数据存储
 
 - 书签保存在 `~/.config/alfred/zap/`（`zap.json` 与 `icon/`）。
 
-## CI 与合并保护
-
-- **测试：** 在仓库根目录执行 `python -m pip install -e ".[dev]"`，再执行 `python -m pytest -q`。测试在 [`tests/`](tests/)，`pytest` 会把 [`workflow/`](workflow/) 加入 `PYTHONPATH`。
-- **GitHub Actions：** 推送到 **`master`** 或以 **`master`** 为目标的 Pull Request 会运行 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)（工作流名 **CI**，任务 **`test`**）。
-- **合并门槛（仓库设置）：** 在 GitHub **Settings → Rules / Branch protection** 为 **`master`** 开启规则，要求状态检查 **`test`**（PR 界面常显示为 **`CI / test`**）通过后才能合并。须由仓库管理员在网页上配置，无法仅靠本仓库内文件实现。
-
-## 安装（使用工作流）
-
-自行构建或下载 **`dist/zap.alfredworkflow`**，然后**双击**（或拖入 Alfred 的 Workflows 列表）。无需手动连线节点——[`workflow/info.plist`](workflow/info.plist) 已包含 Script Filter、Run Script 与连接关系。
-
 ## Alfred 节点说明（供维护者参考）
 
-描述的是打包进工作流里的结构。**最终用户安装时不要按本节操作**；请看上文的「安装」。
+描述的是打包进工作流里的结构。**最终用户安装时不要按本节操作**；请看上文的「快速开始」。
 
 1. **Script Filter**（关键字 `zap`，是否与空格同 plist）
 
