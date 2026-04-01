@@ -15,9 +15,16 @@ ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT_TOML = ROOT / "pyproject.toml"
 WORKFLOW_DIR = ROOT / "workflow"
 DIST = ROOT / "dist"
-DIST_UNPACKED = DIST / "zap-workflow"
-WORKFLOW_ZIP = DIST / "zap.alfredworkflow"
 README_NAME = "README.md"
+
+
+def _dist_artifacts(channel: str) -> tuple[Path, Path, str]:
+    """Paths for built workflow and shutil.make_archive stem (without .zip)."""
+    if channel == "release":
+        return DIST / "zap.alfredworkflow", DIST / "zap-workflow", "zap"
+    if channel == "test":
+        return DIST / "zap-test.alfredworkflow", DIST / "zap-test-workflow", "zap-test"
+    raise ValueError(f"unknown channel: {channel!r}")
 
 PLACEHOLDER_README = "__ZAP_README__"
 
@@ -219,10 +226,12 @@ def build(
     _assert_no_zap_placeholders(plist_data)
     plist_data["version"] = resolved_version
 
+    workflow_zip, dist_unpacked, archive_stem = _dist_artifacts(channel)
+
     DIST.mkdir(parents=True, exist_ok=True)
-    if DIST_UNPACKED.exists():
-        shutil.rmtree(DIST_UNPACKED)
-    WORKFLOW_ZIP.unlink(missing_ok=True)
+    if dist_unpacked.exists():
+        shutil.rmtree(dist_unpacked)
+    workflow_zip.unlink(missing_ok=True)
 
     with tempfile.TemporaryDirectory() as tmp:
         stage = Path(tmp) / "workflow"
@@ -238,15 +247,15 @@ def build(
 
         compileall.compile_dir(str(stage), quiet=2, optimize=0)
 
-        shutil.copytree(stage, DIST_UNPACKED)
+        shutil.copytree(stage, dist_unpacked)
 
-        out_base = DIST / "zap"
+        out_base = DIST / archive_stem
         archive = shutil.make_archive(str(out_base), "zip", root_dir=stage)
-        Path(archive).rename(WORKFLOW_ZIP)
+        Path(archive).rename(workflow_zip)
 
     _write_source_plist_version_only(plist_path, resolved_version)
 
-    return WORKFLOW_ZIP, DIST_UNPACKED, resolved_version
+    return workflow_zip, dist_unpacked, resolved_version
 
 
 def main() -> None:

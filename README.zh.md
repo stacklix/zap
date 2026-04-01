@@ -43,9 +43,11 @@ zap/
 │   └── web/                  # 本地 Web UI（server.py + static/）
 │       ├── server.py
 │       └── static/
-└── dist/                     # 由 `make pack` / `make release` 生成
-    ├── zap.alfredworkflow      # 在 Alfred 中安装此文件
-    └── zap-workflow/           # 与 zip 内容相同，解压目录（便于检查）
+└── dist/                     # 由 `make pack` / `make release` 生成（按通道文件名不同）
+    ├── zap-test.alfredworkflow # `make pack`（test 通道）
+    ├── zap-test-workflow/      # test 解压目录
+    ├── zap.alfredworkflow      # `make release` — 对外发布 / GitHub Releases
+    └── zap-workflow/           # release 解压目录
 ```
 
 ## 数据存储
@@ -56,19 +58,29 @@ zap/
 
 描述的是打包进工作流里的结构。**最终用户安装时不要按本节操作**；请看上文的「快速开始」。
 
-1. **Script Filter**（关键字 `zap`，是否与空格同 plist）
+画布是一条直线：**Script Filter → Run Script → Post Notification**。`http`/`https` 结果在 **`action.py`** 里用 macOS `open`（及 AppleScript 回退）打开。
 
-   - **Language**（`/bin/bash` 或 `/bin/zsh`）：执行脚本文本的 shell；脚本行里用 **`/usr/bin/python3`** 调用 `zap.py`。
-   - **Argument Required / Optional：** Required → 用户需先输入 **`zap` + 空格** 工作流才接管；Optional → 只输入 **`zap`** 也可出现占位或首轮结果。
-   - 脚本（见 plist）：`/usr/bin/python3 "$PWD/zap.py" --script-filter "{query}"`；若 **with input as argv**，用 `/usr/bin/python3 "$PWD/zap.py" --script-filter "$1"`。
-   - **Escaping：** 建议 None。
-   - 输出：Alfred JSON。
+**工作流变量：** 安装包内默认 **`DATA_PATH`** 为 `~/.config/alfred/zap`，用于指定书签目录；见 [`workflow/info.plist`](workflow/info.plist) 的 `variables`。
 
-2. **Run Script** → 接收选中项的 `arg`；运行 `action.py`，由它打开 URL 或转给 `zap.py --action …`。
+1. **Script Filter**（关键字 `zap`）
 
-3. **Open URL**（可选路径）用于纯 URL 结果；其余由 Run Script / `action.py` 处理。
+   - **Language：** `/bin/bash`（plist 里 `type` 为 `0`）。
+   - **关键字 + 空格：** `withspace` 开启—Alfred 在用户输入 **`zap` + 空格** 后，把后续内容作为查询传给脚本。`argumenttreatemptyqueryasnil` 开启（空查询按 Alfred 规则处理）。
+   - **输入方式：** **argv**（`scriptargtype` 为 `1`），脚本字符串里**不**使用 `{query}` 占位符。
+   - **脚本：** `/usr/bin/python3 "$PWD/zap.py" --script-filter "$1"`。
+   - **Escaping：** None（`escaping` 为 `0`）。
+   - **输出：** `zap.py` 返回的 Alfred JSON。
 
-若改坏行为，可重新导入 **`zap.alfredworkflow`**，或对照 [`workflow/info.plist`](workflow/info.plist)。
+2. **Run Script**
+
+   - **脚本：** `/usr/bin/python3 "$PWD/action.py" "$1"`（argv）。接收选中项的 `arg`（与 Filter 同为 bash + argv）。
+   - **逻辑：** `arg` 为 `http`/`https` URL 时直接打开；为 `web` 时在后台启动 `zap.py web`；否则执行 `zap.py --action …`。
+
+3. **Post Notification**（「Zap notify」）
+
+   - 上一步有非空输出时显示 **`{query}`**（`onlyshowifquerypopulated`），用于展示 `action.py` 的 stdout（例如 “Opened web.”）。
+
+若改坏行为，可重新导入 **`dist/`** 下对应的 `.alfredworkflow`（见下文 **产物**），或对照 [`workflow/info.plist`](workflow/info.plist)。
 
 ## 构建打包
 
@@ -104,7 +116,7 @@ python3 scripts/build_workflow.py --channel test --version 0.2.0
 ```bash
 make pack     # test 通道
 make release  # release 通道，版本来自 pyproject.toml
-make install  # 先 pack，再打开 dist/zap.alfredworkflow 安装到 Alfred
+make install  # 先 pack，再打开 dist/zap-test.alfredworkflow 安装到 Alfred
 ```
 
 直接调用脚本：
@@ -118,8 +130,9 @@ python3 scripts/build_workflow.py --channel release
 
 ### 产物
 
-- `dist/zap.alfredworkflow`
-- `dist/zap-workflow/`（解压目录）
+**Test 通道**（`make pack`、脚本默认）：`dist/zap-test.alfredworkflow` 与 `dist/zap-test-workflow/`（解压目录）。
+
+**Release 通道**（`make release`）：`dist/zap.alfredworkflow` 与 `dist/zap-workflow/`（解压目录）。固定文件名供 [`.github/workflows/release.yml`](.github/workflows/release.yml) 上传 Release 使用。
 
 ## 命令行调试
 
