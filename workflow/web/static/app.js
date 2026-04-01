@@ -45,6 +45,7 @@
   const helpItemEditEl = document.getElementById("help-item-edit");
   const helpItemDelEl = document.getElementById("help-item-del");
   const helpItemWebEl = document.getElementById("help-item-web");
+  let toastTimer = null;
 
   const I18N = {
     en: {
@@ -81,6 +82,7 @@
       helpEdit: "<code>zap edit &lt;title&gt;</code> Add/update and prompt URL in dialog.",
       helpDel: "<code>zap del &lt;title&gt;</code> Delete a bookmark with confirmation.",
       helpWeb: "<code>zap web</code> Open this web manager page.",
+      iconFetchFail: "Bookmark saved, but icon fetch failed.",
     },
     "zh-Hans": {
       help: "帮助",
@@ -116,6 +118,7 @@
       helpEdit: "<code>zap edit &lt;title&gt;</code> 新增/更新，并通过弹窗输入链接。",
       helpDel: "<code>zap del &lt;title&gt;</code> 删除书签（会二次确认）。",
       helpWeb: "<code>zap web</code> 打开当前网页管理界面。",
+      iconFetchFail: "书签已保存，但图标抓取失败。",
     },
     "zh-Hant": {
       help: "說明",
@@ -151,6 +154,7 @@
       helpEdit: "<code>zap edit &lt;title&gt;</code> 新增/更新，並以對話框輸入連結。",
       helpDel: "<code>zap del &lt;title&gt;</code> 刪除書籤（會再次確認）。",
       helpWeb: "<code>zap web</code> 開啟目前網頁管理介面。",
+      iconFetchFail: "書籤已儲存，但圖示抓取失敗。",
     },
   };
   let currentLang = "en";
@@ -193,6 +197,23 @@
     helpItemEditEl.innerHTML = t("helpEdit");
     helpItemDelEl.innerHTML = t("helpDel");
     helpItemWebEl.innerHTML = t("helpWeb");
+  }
+
+  function showToast(msg) {
+    let toast = document.getElementById("toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "toast";
+      toast.className = "toast";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove("show");
+      toastTimer = null;
+    }, 2800);
   }
 
   const DEBOUNCE_MS = 220;
@@ -428,8 +449,18 @@
         setSaveError(err.error || t("saveFailed"));
         return;
       }
+      const payload = await res.json().catch(() => ({}));
       closeSaveModal();
       await loadBookmarks();
+      if (!payload.icon) {
+        console.warn("Icon fetch failed", {
+          title,
+          url,
+          reason: payload.iconError || null,
+          response: payload,
+        });
+        showToast(t("iconFetchFail"));
+      }
     } catch (e) {
       setSaveError(t("netErr"));
       console.error(e);

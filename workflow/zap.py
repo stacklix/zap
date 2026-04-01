@@ -17,6 +17,7 @@ _ICON_SUBDIR = "icon"
 _DEFAULT_DATA_DIR = Path("~/.config/alfred/zap").expanduser()
 _WEB_PORT_MIN = 14535
 _WEB_PORT_MAX = 15000
+PYTHON_BIN = "/usr/bin/python3"
 
 
 def _data_dir_from_env() -> Path:
@@ -134,18 +135,23 @@ def remove_stored_icon(filename: Optional[str]) -> None:
 
 
 def fetch_and_store_icon(page_url: str, title: str) -> Optional[str]:
+    name, _err = fetch_and_store_icon_with_reason(page_url, title)
+    return name
+
+
+def fetch_and_store_icon_with_reason(page_url: str, title: str) -> tuple[Optional[str], Optional[str]]:
     import favicon as site_favicon
 
-    got = site_favicon.fetch_favicon(page_url)
+    got, err = site_favicon.fetch_favicon_with_error(page_url)
     if not got:
-        return None
+        return None, err
     raw, ext = got
     if ext not in (".png", ".jpg", ".jpeg", ".ico", ".svg", ".webp"):
         ext = ".ico"
     ensure_store()
     name = make_icon_filename(title, ext)
     (ICON_DIR / name).write_bytes(raw)
-    return name
+    return name, None
 
 
 def _refresh_icon_for_bookmark(title: str, url: str) -> None:
@@ -166,13 +172,18 @@ def _refresh_icon_for_bookmark(title: str, url: str) -> None:
 
 
 def _schedule_icon_refresh(title: str, url: str) -> None:
-    t = threading.Thread(
-        target=_refresh_icon_for_bookmark,
-        args=(title, url),
-        name="zap-cli-icon-fetch",
-        daemon=True,
-    )
-    t.start()
+    script = str(Path(__file__).resolve())
+    try:
+        subprocess.Popen(  # noqa: S603
+            [PYTHON_BIN, script, "--refresh-icon", title, url],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+            start_new_session=True,
+        )
+    except OSError:
+        # Fallback: run inline to avoid losing favicon update entirely.
+        _refresh_icon_for_bookmark(title, url)
 
 
 def default_bookmark_icon_path() -> Path:
@@ -453,6 +464,14 @@ def _script_filter_query_from_argv(argv: List[str]) -> str:
 
 
 def main(argv: List[str]) -> int:
+    if len(argv) >= 2 and argv[1] == "--refresh-icon":
+        if len(argv) < 4:
+            return 1
+        title = argv[2]
+        url = argv[3]
+        _refresh_icon_for_bookmark(title, url)
+        return 0
+
     if len(argv) >= 2 and argv[1] == "--script-filter":
         q = _script_filter_query_from_argv(argv)
         print(json.dumps(script_filter_payload(q), ensure_ascii=False))

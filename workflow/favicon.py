@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from typing import List, Optional, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse, urlunparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener, getproxies, urlopen
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -20,11 +20,43 @@ FETCH_TIMEOUT = 12
 
 
 def _request(url: str) -> Request:
-    return Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"}, method="GET")
+    return Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            # Browser-like default headers improve compatibility on stricter sites/CDNs.
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+        },
+        method="GET",
+    )
 
 
 def _ssl_context() -> ssl.SSLContext:
     return ssl.create_default_context()
+
+
+def _open_url(req: Request, timeout: int, context: ssl.SSLContext):
+    """Open request with system/environment proxy support when available."""
+    proxies = getproxies() or {}
+    if proxies:
+        opener = build_opener(ProxyHandler(proxies), HTTPSHandler(context=context))
+        return opener.open(req, timeout=timeout)
+    return urlopen(req, timeout=timeout, context=context)
+
+
+def _format_fetch_error(url: str, exc: Exception) -> str:
+    if isinstance(exc, HTTPError):
+        return f"HTTP {exc.code} for {url}"
+    if isinstance(exc, URLError):
+        return f"URL error for {url}: {exc.reason}"
+    if isinstance(exc, TimeoutError):
+        return f"Timeout fetching {url}"
+    if isinstance(exc, OSError):
+        return f"OS error for {url}: {exc}"
+    return f"Fetch error for {url}: {exc}"
 
 
 def _content_type(headers) -> str:
@@ -39,20 +71,22 @@ def _content_type(headers) -> str:
 
 def fetch_limited(url: str, limit: int) -> Optional[Tuple[str, str, bytes]]:
     """GET url; return (final_url, content_type, body) or None. Follows redirects."""
+    out, _err = fetch_limited_with_error(url, limit)
+    return out
+
+
+def fetch_limited_with_error(url: str, limit: int) -> tuple[Optional[Tuple[str, str, bytes]], Optional[str]]:
+    """GET url; return ((final_url, content_type, body) or None, error string)."""
     try:
-        with urlopen(
-            _request(url),
-            timeout=FETCH_TIMEOUT,
-            context=_ssl_context(),
-        ) as resp:
+        with _open_url(_request(url), timeout=FETCH_TIMEOUT, context=_ssl_context()) as resp:
             final = resp.geturl()
             ct = _content_type(resp.headers)
             chunk = resp.read(limit + 1)
         if len(chunk) > limit:
-            return None
-        return final, ct, chunk
-    except (HTTPError, URLError, OSError, ValueError):
-        return None
+            return None, f"Response exceeds limit ({limit} bytes): {url}"
+        return (final, ct, chunk), None
+    except (HTTPError, URLError, OSError, ValueError, TimeoutError) as e:
+        return None, _format_fetch_error(url, e)
 
 
 def _ext_from_type(ct: str, url: str) -> str:
@@ -162,17 +196,17 @@ def _sorted_hrefs(links: List[Tuple[str, str, str]], base_url: str) -> List[str]
     return out
 
 
-def _fetch_favicon_once(page_url: str) -> Optional[Tuple[bytes, str]]:
-    """Download favicon bytes once for page_url."""
-    page = fetch_limited(page_url, MAX_HTML_BYTES)
+def _fetch_favicon_once(page_url: str) -> tuple[Optional[Tuple[bytes, str]], Optional[str]]:
+    """Download favicon bytes once for page_url and return (result, error)."""
+    page, page_err = fetch_limited_with_error(page_url, MAX_HTML_BYTES)
     if not page:
-        return None
+        return None, page_err or f"Page fetch failed: {page_url}"
     final_page_url, ct, body = page
 
     if ct.startswith("image/"):
         ext = _ext_from_type(ct, final_page_url)
         if _looks_like_image(body, ext):
-            return body, ext
+            return (body, ext), None
 
     try:
         text = body.decode("utf-8", errors="replace")
@@ -187,25 +221,25 @@ def _fetch_favicon_once(page_url: str) -> Optional[Tuple[bytes, str]]:
         pass
 
     for href in _sorted_hrefs(parser.links, final_page_url):
-        img = fetch_limited(href, MAX_IMAGE_BYTES)
+        img, _img_err = fetch_limited_with_error(href, MAX_IMAGE_BYTES)
         if not img:
             continue
         _, ict, raw = img
         ext = _ext_from_type(ict, href)
         if _looks_like_image(raw, ext):
-            return raw, ext
+            return (raw, ext), None
 
     parsed = urlparse(final_page_url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
     ico_url = urljoin(origin + "/", "favicon.ico")
-    img = fetch_limited(ico_url, MAX_IMAGE_BYTES)
+    img, ico_err = fetch_limited_with_error(ico_url, MAX_IMAGE_BYTES)
     if img:
         _, _, raw = img
         ext = ".ico"
         if _looks_like_image(raw, ext):
-            return raw, ext
+            return (raw, ext), None
 
-    return None
+    return None, f"No valid favicon found at {final_page_url}; favicon.ico result: {ico_err or 'not image/empty'}"
 
 
 def _url_without_leading_www(page_url: str) -> Optional[str]:
@@ -228,10 +262,25 @@ def fetch_favicon(page_url: str) -> Optional[Tuple[bytes, str]]:
     Returns (data, extension_with_dot) or None.
     If first pass fails and host starts with www., retry once without www.
     """
-    got = _fetch_favicon_once(page_url)
+    got, _err = _fetch_favicon_once(page_url)
     if got is not None:
         return got
     fallback_url = _url_without_leading_www(page_url)
     if fallback_url and fallback_url != page_url:
-        return _fetch_favicon_once(fallback_url)
+        got2, _err2 = _fetch_favicon_once(fallback_url)
+        return got2
     return None
+
+
+def fetch_favicon_with_error(page_url: str) -> tuple[Optional[Tuple[bytes, str]], Optional[str]]:
+    """Like fetch_favicon but returns backend-friendly failure reason."""
+    got, err = _fetch_favicon_once(page_url)
+    if got is not None:
+        return got, None
+    fallback_url = _url_without_leading_www(page_url)
+    if fallback_url and fallback_url != page_url:
+        got2, err2 = _fetch_favicon_once(fallback_url)
+        if got2 is not None:
+            return got2, None
+        return None, f"{err}; fallback without www failed: {err2}"
+    return None, err
