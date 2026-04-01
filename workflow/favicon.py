@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from typing import List, Optional, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse, urlunparse
-from urllib.request import HTTPSHandler, ProxyHandler, Request, build_opener, getproxies, urlopen
+from urllib.request import Request, urlopen
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -17,6 +17,7 @@ USER_AGENT = (
 MAX_HTML_BYTES = 768_000
 MAX_IMAGE_BYTES = 2_048_000
 FETCH_TIMEOUT = 12
+_last_fetch_error: Optional[str] = None
 
 
 def _request(url: str) -> Request:
@@ -39,11 +40,7 @@ def _ssl_context() -> ssl.SSLContext:
 
 
 def _open_url(req: Request, timeout: int, context: ssl.SSLContext):
-    """Open request with system/environment proxy support when available."""
-    proxies = getproxies() or {}
-    if proxies:
-        opener = build_opener(ProxyHandler(proxies), HTTPSHandler(context=context))
-        return opener.open(req, timeout=timeout)
+    """Open request (urlopen honors system/environment proxy settings)."""
     return urlopen(req, timeout=timeout, context=context)
 
 
@@ -71,7 +68,9 @@ def _content_type(headers) -> str:
 
 def fetch_limited(url: str, limit: int) -> Optional[Tuple[str, str, bytes]]:
     """GET url; return (final_url, content_type, body) or None. Follows redirects."""
+    global _last_fetch_error
     out, _err = fetch_limited_with_error(url, limit)
+    _last_fetch_error = _err
     return out
 
 
@@ -198,9 +197,9 @@ def _sorted_hrefs(links: List[Tuple[str, str, str]], base_url: str) -> List[str]
 
 def _fetch_favicon_once(page_url: str) -> tuple[Optional[Tuple[bytes, str]], Optional[str]]:
     """Download favicon bytes once for page_url and return (result, error)."""
-    page, page_err = fetch_limited_with_error(page_url, MAX_HTML_BYTES)
+    page = fetch_limited(page_url, MAX_HTML_BYTES)
     if not page:
-        return None, page_err or f"Page fetch failed: {page_url}"
+        return None, _last_fetch_error or f"Page fetch failed: {page_url}"
     final_page_url, ct, body = page
 
     if ct.startswith("image/"):
@@ -221,7 +220,7 @@ def _fetch_favicon_once(page_url: str) -> tuple[Optional[Tuple[bytes, str]], Opt
         pass
 
     for href in _sorted_hrefs(parser.links, final_page_url):
-        img, _img_err = fetch_limited_with_error(href, MAX_IMAGE_BYTES)
+        img = fetch_limited(href, MAX_IMAGE_BYTES)
         if not img:
             continue
         _, ict, raw = img
@@ -232,14 +231,14 @@ def _fetch_favicon_once(page_url: str) -> tuple[Optional[Tuple[bytes, str]], Opt
     parsed = urlparse(final_page_url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
     ico_url = urljoin(origin + "/", "favicon.ico")
-    img, ico_err = fetch_limited_with_error(ico_url, MAX_IMAGE_BYTES)
+    img = fetch_limited(ico_url, MAX_IMAGE_BYTES)
     if img:
         _, _, raw = img
         ext = ".ico"
         if _looks_like_image(raw, ext):
             return (raw, ext), None
 
-    return None, f"No valid favicon found at {final_page_url}; favicon.ico result: {ico_err or 'not image/empty'}"
+    return None, f"No valid favicon found at {final_page_url}; favicon.ico result: {_last_fetch_error or 'not image/empty'}"
 
 
 def _url_without_leading_www(page_url: str) -> Optional[str]:

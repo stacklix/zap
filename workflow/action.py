@@ -4,7 +4,8 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
-PYTHON_BIN = "/usr/bin/python3"
+PYTHON_BIN = "python3"
+PYTHON_BIN_FALLBACK = "/usr/bin/python3"
 
 
 def _open_url(url: str) -> int:
@@ -56,9 +57,13 @@ def main() -> int:
     try:
         proc = subprocess.run([PYTHON_BIN, script, "--action", arg], check=False)
         return proc.returncode
-    except OSError as e:
-        print(f"Action runner failed: {e}")
-        return 1
+    except OSError:
+        try:
+            proc = subprocess.run([PYTHON_BIN_FALLBACK, script, "--action", arg], check=False)
+            return proc.returncode
+        except OSError as e:
+            print(f"Action runner failed: {e}")
+            return 1
 
 
 if __name__ == "__main__":

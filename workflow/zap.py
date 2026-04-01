@@ -142,7 +142,10 @@ def fetch_and_store_icon(page_url: str, title: str) -> Optional[str]:
 def fetch_and_store_icon_with_reason(page_url: str, title: str) -> tuple[Optional[str], Optional[str]]:
     import favicon as site_favicon
 
-    got, err = site_favicon.fetch_favicon_with_error(page_url)
+    got = site_favicon.fetch_favicon(page_url)
+    err: Optional[str] = None
+    if not got and hasattr(site_favicon, "fetch_favicon_with_error"):
+        got, err = site_favicon.fetch_favicon_with_error(page_url)
     if not got:
         return None, err
     raw, ext = got
