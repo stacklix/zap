@@ -217,3 +217,20 @@ def test_fetch_favicon_decode_and_fallback_failure(monkeypatch) -> None:
     monkeypatch.setattr(favicon_mod, "fetch_limited", _fetch_none)
     assert favicon_mod.fetch_favicon("https://n/page") is None
 
+
+def test_fetch_favicon_retries_without_www_once(monkeypatch) -> None:
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 8
+    html = b"<html><head><link rel='icon' href='/icon.png'></head></html>"
+
+    def _fetch_www(url: str, _limit: int):
+        if url == "https://www.example.com/page":
+            return None
+        if url == "https://example.com/page":
+            return ("https://example.com/page", "text/html", html)
+        if url == "https://example.com/icon.png":
+            return ("https://example.com/icon.png", "image/png", png)
+        return None
+
+    monkeypatch.setattr(favicon_mod, "fetch_limited", _fetch_www)
+    assert favicon_mod.fetch_favicon("https://www.example.com/page") == (png, ".png")
+

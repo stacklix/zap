@@ -105,6 +105,7 @@ python3 scripts/build_workflow.py --channel test --version 0.2.0
 ```bash
 make pack     # test 通道
 make release  # release 通道，版本来自 pyproject.toml
+make install  # 先 pack，再打开 dist/zap.alfredworkflow 安装到 Alfred
 ```
 
 直接调用脚本：

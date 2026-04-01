@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import mimetypes
+import plistlib
 import subprocess
 import threading
 import time
@@ -75,6 +76,18 @@ def _safe_static_path(url_path: str) -> Path | None:
     return candidate if candidate.is_file() else None
 
 
+def _workflow_version() -> str:
+    plist_path = WORKFLOW_DIR / "info.plist"
+    if not plist_path.is_file():
+        return "dev"
+    try:
+        with open(plist_path, "rb") as f:
+            data = plistlib.load(f)
+        return str(data.get("version", "dev"))
+    except Exception:
+        return "dev"
+
+
 class ZapWebHandler(BaseHTTPRequestHandler):
     def _send_file(self, path: Path, content_type: str) -> None:
         body = path.read_bytes()
@@ -134,6 +147,11 @@ class ZapWebHandler(BaseHTTPRequestHandler):
         if path == "/api/ping":
             _mark_ping()
             self._json({"ok": True})
+            return
+
+        if path == "/api/version":
+            _mark_ping()
+            self._json({"version": _workflow_version()})
             return
 
         if path == "/api/bookmarks":
@@ -203,11 +221,12 @@ class ZapWebHandler(BaseHTTPRequestHandler):
             self._json({"error": "url required"}, 400)
             return
         data = zap.load_bookmarks()
-        if title in data:
-            zap.remove_stored_icon(data[title].get("icon"))
+        prev_icon = data[title].get("icon") if title in data else None
         icon = zap.fetch_and_store_icon(url, title)
         data[title] = {"url": url, "icon": icon}
         zap.save_bookmarks(data)
+        if prev_icon and prev_icon != icon:
+            zap.remove_stored_icon(prev_icon)
         self._json({"ok": True, "icon": icon})
 
     def do_DELETE(self) -> None:  # noqa: N802

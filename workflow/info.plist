@@ -20,16 +20,6 @@
 				<key>vitoclose</key>
 				<false/>
 			</dict>
-			<dict>
-				<key>destinationuid</key>
-				<string>CC1DF1FB-2C26-42CD-97C3-BAC9C52E1F9C</string>
-				<key>modifiers</key>
-				<integer>0</integer>
-				<key>modifiersubtext</key>
-				<string></string>
-				<key>vitoclose</key>
-				<false/>
-			</dict>
 		</array>
 		<key>99295EDC-5137-49D9-AE0E-42C711D7A1D6</key>
 		<array>
@@ -46,7 +36,7 @@
 		</array>
 	</dict>
 	<key>createdby</key>
-	<string>magaxio</string>
+	<string>stacklix</string>
 	<key>description</key>
 	<string>Zap your bookmarks. Instant access, zero friction.</string>
 	<key>disabled</key>
@@ -55,50 +45,6 @@
 	<string>zap</string>
 	<key>objects</key>
 	<array>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>lastpathcomponent</key>
-				<false/>
-				<key>onlyshowifquerypopulated</key>
-				<false/>
-				<key>removeextension</key>
-				<false/>
-				<key>text</key>
-				<string>{query}</string>
-				<key>title</key>
-				<string>Zap notify</string>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.output.notification</string>
-			<key>uid</key>
-			<string>07F0AE69-9540-44F9-82C5-A9C1AA1E92B7</string>
-			<key>version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>concurrently</key>
-				<false/>
-				<key>escaping</key>
-				<integer>102</integer>
-				<key>script</key>
-				<string>/usr/bin/python3 "$PWD/action.py" "$1"</string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>scriptfile</key>
-				<string></string>
-				<key>type</key>
-				<integer>0</integer>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.action.script</string>
-			<key>uid</key>
-			<string>99295EDC-5137-49D9-AE0E-42C711D7A1D6</string>
-			<key>version</key>
-			<integer>2</integer>
-		</dict>
 		<dict>
 			<key>config</key>
 			<dict>
@@ -151,21 +97,46 @@
 		<dict>
 			<key>config</key>
 			<dict>
-				<key>autopaste</key>
+				<key>lastpathcomponent</key>
 				<false/>
-				<key>clipboardtext</key>
+				<key>onlyshowifquerypopulated</key>
+				<true/>
+				<key>removeextension</key>
+				<false/>
+				<key>text</key>
 				<string>{query}</string>
-				<key>ignoredynamicplaceholders</key>
-				<false/>
-				<key>transient</key>
-				<false/>
+				<key>title</key>
+				<string>Zap notify</string>
 			</dict>
 			<key>type</key>
-			<string>alfred.workflow.output.clipboard</string>
+			<string>alfred.workflow.output.notification</string>
 			<key>uid</key>
-			<string>CC1DF1FB-2C26-42CD-97C3-BAC9C52E1F9C</string>
+			<string>07F0AE69-9540-44F9-82C5-A9C1AA1E92B7</string>
 			<key>version</key>
-			<integer>3</integer>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>/usr/bin/python3 "$PWD/action.py" "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>99295EDC-5137-49D9-AE0E-42C711D7A1D6</string>
+			<key>version</key>
+			<integer>2</integer>
 		</dict>
 	</array>
 	<key>readme</key>
@@ -175,9 +146,9 @@
 		<key>07F0AE69-9540-44F9-82C5-A9C1AA1E92B7</key>
 		<dict>
 			<key>xpos</key>
-			<real>665.0</real>
+			<real>525.0</real>
 			<key>ypos</key>
-			<real>195.0</real>
+			<real>265.0</real>
 		</dict>
 		<key>723E01A5-DDD3-4FEA-A9B7-A614B522491C</key>
 		<dict>
@@ -189,16 +160,9 @@
 		<key>99295EDC-5137-49D9-AE0E-42C711D7A1D6</key>
 		<dict>
 			<key>xpos</key>
-			<real>460.0</real>
+			<real>285.0</real>
 			<key>ypos</key>
-			<real>195.0</real>
-		</dict>
-		<key>CC1DF1FB-2C26-42CD-97C3-BAC9C52E1F9C</key>
-		<dict>
-			<key>xpos</key>
-			<real>460.0</real>
-			<key>ypos</key>
-			<real>375.0</real>
+			<real>265.0</real>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
@@ -207,13 +171,11 @@
 	<dict>
 		<key>DATA_PATH</key>
 		<string>~/.config/alfred/zap</string>
-		<key>WEB_PORT</key>
-		<string>14535</string>
 	</dict>
 	<key>variablesdontexport</key>
 	<array/>
 	<key>version</key>
-	<string>0.2.1</string>
+	<string>0.2.20</string>
 	<key>webaddress</key>
 	<string>https://stackli.cc</string>
 </dict>

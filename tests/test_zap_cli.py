@@ -20,16 +20,30 @@ def test_data_dir_from_env_relative_and_empty(monkeypatch, tmp_path) -> None:
     assert zap._data_dir_from_env() == tmp_path / "rel/path"  # noqa: SLF001
 
 
-def test_web_port_from_env_validation(monkeypatch) -> None:
-    monkeypatch.setattr(zap, "_DEFAULT_WEB_PORT", 14535)
-    monkeypatch.setenv("WEB_PORT", "")
-    assert zap._web_port_from_env() == 14535  # noqa: SLF001
-    monkeypatch.setenv("WEB_PORT", "not-int")
-    assert zap._web_port_from_env() == 14535  # noqa: SLF001
-    monkeypatch.setenv("WEB_PORT", "99999")
-    assert zap._web_port_from_env() == 14535  # noqa: SLF001
-    monkeypatch.setenv("WEB_PORT", "2345")
-    assert zap._web_port_from_env() == 2345  # noqa: SLF001
+def test_pick_open_web_port_in_range(monkeypatch) -> None:
+    monkeypatch.setattr(zap, "_WEB_PORT_MIN", 14535)
+    monkeypatch.setattr(zap, "_WEB_PORT_MAX", 14537)
+    monkeypatch.setattr(zap.random, "shuffle", lambda _ports: None)
+
+    class _Sock:
+        attempts: list[int] = []
+
+        def __init__(self, *_a, **_k) -> None:
+            self.port = None
+
+        def bind(self, addr) -> None:
+            port = int(addr[1])
+            self.port = port
+            _Sock.attempts.append(port)
+            if port in (14535, 14536):
+                raise OSError("in use")
+
+        def close(self) -> None:
+            return None
+
+    monkeypatch.setattr(zap.socket, "socket", lambda *_a, **_k: _Sock())
+    assert zap._pick_open_web_port() == 14537  # noqa: SLF001
+    assert _Sock.attempts == [14535, 14536, 14537]
 
 
 def test_load_bookmarks_filters_invalid_and_bad_json(zap_module, tmp_path) -> None:
@@ -152,6 +166,11 @@ def test_edit_and_delete_branches(zap_module, monkeypatch) -> None:
     assert zap_module.edit("A", None) == "Cancelled."
 
     monkeypatch.setattr(zap_module, "prompt_for_url", lambda _t: "example.com")
+    monkeypatch.setattr(
+        zap_module,
+        "_schedule_icon_refresh",
+        lambda title, url: zap_module._refresh_icon_for_bookmark(title, url),
+    )
     monkeypatch.setattr(zap_module, "fetch_and_store_icon", lambda _u, _t: "n.png")
     assert zap_module.edit("A", None) == "Saved: A -> https://example.com"
 
@@ -288,7 +307,7 @@ def test_open_web_dispatches_to_web_server(monkeypatch) -> None:
     def _serve(host: str, port: int) -> None:
         called.append((host, port))
 
-    monkeypatch.setattr(zap, "WEB_PORT", 23456)
+    monkeypatch.setattr(zap, "_pick_open_web_port", lambda: 23456)
     import types
 
     fake_web_server = types.SimpleNamespace(serve_zap_web=_serve)

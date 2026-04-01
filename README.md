@@ -105,6 +105,7 @@ If stdin is not a terminal and `ZAP_VERSION` / `--version` are unset, the **sugg
 ```bash
 make pack     # test channel
 make release  # release channel from pyproject.toml version
+make install  # pack first, then open dist/zap.alfredworkflow in Alfred
 ```
 
 Direct script:
